@@ -1,0 +1,190 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <iomanip>
+#include <stdexcept>
+using namespace std;
+
+class Advisory {
+public:
+    virtual void giveAdvice() = 0;
+    virtual ~Advisory() {}
+};
+
+class Crop {
+protected:
+    string name, season;
+    double area, yieldPerAcre;
+    static int cropCount;
+
+public:
+    Crop() : name("Unknown"), season("Unknown"),
+             area(1), yieldPerAcre(0) {
+        cropCount++;
+    }
+
+    Crop(string n, double a, string s, double y) {
+        if (a <= 0 || y < 0)
+            throw invalid_argument("Invalid area or yield!");
+
+        name = n;
+        area = a;
+        season = s;
+        yieldPerAcre = y;
+        cropCount++;
+    }
+
+    virtual double totalYield() const {
+        return area * yieldPerAcre;
+    }
+
+    virtual void display() const {
+        cout << "\nCrop Name: " << name
+             << "\nArea: " << area << " acres"
+             << "\nSeason: " << season
+             << "\nYield per Acre: " << yieldPerAcre
+             << "\nTotal Yield: " << totalYield()
+             << endl;
+    }
+
+    bool operator>(const Crop& c) const {
+        return totalYield() > c.totalYield();
+    }
+
+    void saveToFile(ofstream& fout) const {
+        fout << name << "\n"
+             << area << "\n"
+             << season << "\n"
+             << yieldPerAcre << "\n";
+    }
+
+    static int getCropCount() {
+        return cropCount;
+    }
+
+    virtual ~Crop() {
+        cout << "Crop object destroyed.\n";
+    }
+};
+
+int Crop::cropCount = 0;
+
+class CerealCrop : public Crop, public Advisory {
+    string fertilizerType;
+
+public:
+    CerealCrop() : Crop(), fertilizerType("Organic") {}
+
+    CerealCrop(string n, double a, string s, double y,
+               string f)
+        : Crop(n, a, s, y), fertilizerType(f) {}
+
+    void display() const override {
+        Crop::display();
+        cout << "Fertilizer: " << fertilizerType << endl;
+    }
+
+    void giveAdvice() override {
+        cout << "Advice: Use balanced fertilizer and "
+             << "control weeds regularly.\n";
+    }
+};
+
+class VegetableCrop : public Crop, public Advisory {
+    string irrigationFrequency;
+
+public:
+    VegetableCrop() : Crop(), irrigationFrequency("Daily") {}
+
+    VegetableCrop(string n, double a, string s, double y,
+                  string i)
+        : Crop(n, a, s, y), irrigationFrequency(i) {}
+
+    void display() const override {
+        Crop::display();
+        cout << "Irrigation Frequency: "
+             << irrigationFrequency << endl;
+    }
+
+    void giveAdvice() override {
+        cout << "Advice: Maintain proper soil moisture "
+             << "and monitor pests regularly.\n";
+    }
+};
+
+int main() {
+    try {
+        CerealCrop cereal("Rice", 5, "Kharif", 20, "Urea");
+        VegetableCrop vegetable("Tomato", 3, "Winter", 15,
+                                "Every 2 days");
+
+        cout << fixed << setprecision(2);
+        cout << "SMART FARM MANAGEMENT SYSTEM\n";
+
+        cout << "\n--- Cereal Crop ---\n";
+        cereal.display();
+
+        cout << "\n--- Vegetable Crop ---\n";
+        vegetable.display();
+
+        Crop* crops[2] = {&cereal, &vegetable};
+
+        cout << "\n--- Total Yield Analysis ---\n";
+        for (int i = 0; i < 2; i++) {
+            cout << "Total yield: "
+                 << crops[i]->totalYield() << " units\n";
+        }
+
+        cout << "\n--- Yield Comparison ---\n";
+        if (cereal > vegetable)
+            cout << "Rice has a higher yield.\n";
+        else
+            cout << "Tomato has a higher or equal yield.\n";
+
+        cout << "\n--- Farming Advice ---\n";
+        Advisory* advice[2] = {&cereal, &vegetable};
+        advice[0]->giveAdvice();
+        advice[1]->giveAdvice();
+
+        cout << "\nTotal crop objects created: "
+             << Crop::getCropCount() << endl;
+
+        string fileName = "crops.txt";
+        ofstream fout(fileName);
+
+        if (fout.is_open()) {
+            cereal.saveToFile(fout);
+            vegetable.saveToFile(fout);
+            fout.close();
+
+            cout << "\nCrop data saved to "
+                 << fileName << endl;
+
+            ifstream fin(fileName);
+
+            if (fin.is_open()) {
+                string line;
+                cout << "\n--- Retrieved Crop Data ---\n";
+
+                while (getline(fin, line)) {
+                    cout << line << endl;
+                }
+
+                fin.close();
+            } else {
+                cout << "Unable to read the file.\n";
+            }
+        } else {
+            cout << "\nFile writing is unavailable "
+                 << "in this compiler.\n";
+            cout << "The remaining program completed "
+                 << "successfully.\n";
+        }
+    }
+    catch (const exception& e) {
+        cerr << "Error: " << e.what() << endl;
+        return 1;
+    }
+
+    return 0;
+}
